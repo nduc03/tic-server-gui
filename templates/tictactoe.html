@@ -1,0 +1,318 @@
+<html>
+
+<head>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: baseline;
+            height: 100vh;
+            background-color: #f8f9fa;
+        }
+
+        #main {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            background-color: #ffffff;
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 100px);
+            grid-gap: 5px;
+            margin-top: 20px;
+        }
+
+        .cell {
+            width: 50px;
+            height: 50px;
+            border: 1px solid gray;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+            .cell.taken {
+                pointer-events: none;
+            }
+
+        .message {
+            margin-top: 20px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .reset {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: whitesmoke;
+            border: 1px solid dodgerblue;
+            color: dodgerblue;
+            border-radius: 8px;
+        }
+
+        #mouseBlockOverlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black background */
+            z-index: 9999; /* Ensure it stays on top */
+            /*            display: flex;*/
+            justify-content: center;
+            align-items: center;
+        }
+    </style>
+    <script>
+        const PLAYER_INT = -1;
+        const COMP_INT = 1;
+
+
+
+        function clickCell(index) {
+            document.getElementById("board").childNodes[index].click();
+        }
+
+        
+
+        // Start the game
+    </script>
+</head>
+
+<body>
+    <div id="size" style="display:none">{{size}}</div>
+    <div id"mouseBlockOverlay">
+    </div>
+    <div id="main">
+        <h1>TIC TAC TOE</h1>
+        <p id="ins">
+            Tap on a box to play.<br><br>
+            <b>Player X</b> starts first, followed by <b>Computer Player O</b>.
+        </p>
+        <div id="board" class="board"></div>
+        <br>
+        <button id="reset" class="reset">RESET</button>
+        <p id="message" class="message"></p>
+    </div>
+    <script>
+        const size = Number.parseInt(document.getElementById('size').innerText);
+        console.log(size);
+
+        function block() {
+            const overlay = document.getElementById('mouseBlockOverlay');
+            overlay.style.display = 'flex';
+
+            const loadingText = document.createElement('div');
+            loadingText.textContent = 'Loading...';
+            loadingText.style.fontSize = '16px';
+            loadingText.style.color = '#ffffff'; // Good contrast for black and semi-transparent backgrounds
+            loadingText.style.backgroundColor = '#000000'; // Black background for contrast with white
+            loadingText.style.padding = '10px 20px';
+            loadingText.style.borderRadius = '5px';
+            loadingText.style.boxShadow = '0 0 10px rgba(0, 0, 0, 0.5)';
+
+            overlay.appendChild(loadingText);
+            //overlay.id = 'mouseBlockOverlay';
+            //document.body.appendChild(overlay);
+        }
+
+        function unblock() {
+            const overlay = document.getElementById('mouseBlockOverlay');
+            overlay.style.display = 'none';
+        }
+
+        const TicTac = {
+            cPlayer: "X",
+            state: Array(size * size).fill(0),
+            gameOver: false,
+
+            // Initialize the game
+            init() {
+                this.cBoard();
+                document
+                    .getElementById("reset")
+                    .addEventListener("click", () => this.reset());
+            },
+
+            // Create the game board dynamically
+            cBoard() {
+                const board = document.getElementById("board");
+                board.innerHTML = ""; // Clear previous board
+                const size = Math.sqrt(this.state.length);
+                board.style.gridTemplateColumns = `repeat(${size}, 50px)`;
+                this.state.forEach((_, i) => {
+                    const cell = document.createElement("div");
+                    cell.classList.add("cell");
+                    cell.dataset.index = i;
+                    board.appendChild(cell);
+                });
+                board.addEventListener("click", (e) => this.handleClick(e)); // Handle clicks on the board
+                this.uMessage(`Player ${this.cPlayer}'s turn`);
+            },
+
+            // Handle a cell click
+            handleClick(e) {
+                const cell = e.target;
+                const i = cell.dataset.index;
+
+                // Ignore clicks if game is over or cell is taken
+                if (this.gameOver || !cell.classList.contains("cell") || this.state[i])
+                    return;
+
+                // Update board state and UI
+                this.state[i] = this.cPlayer === "X" ? PLAYER_INT : COMP_INT;
+                cell.textContent = this.cPlayer;
+                cell.classList.add("taken");
+
+                // Check for winner or tie
+                const win = this.checkWin();
+                if (win) {
+                    this.uMessage(`Player ${win} wins!`);
+                    this.gameOver = true;
+                } else if (this.state.every((cell) => cell)) {
+                    this.uMessage("It's a tie!");
+                    this.gameOver = true;
+                } else {
+                    // Switch players
+                    this.cPlayer = this.cPlayer === "X" ? "O" : "X";
+                    this.uMessage(`Player ${this.cPlayer}'s turn`);
+                    if (this.cPlayer === "O") {
+                        this.compMove();
+                    }
+                }
+            },
+
+            // Computer player move
+            compMove() {
+                //block();
+                const strState = this.state.map(num =>
+                    (num === PLAYER_INT ? '-' : num === COMP_INT ? '+' : num)
+                ).join('');
+
+                let dept = 1;
+
+                switch (size) {
+                    case 3:
+                        dept = 10;
+                        break;
+                    case 4:
+                        dept = 5;
+                        break;
+                    default:
+                        dept = 2;
+                        break;
+                }
+
+                fetch("/findmove", {
+                    method: "POST",
+                    signal: AbortSignal.timeout(30000),
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        state: strState,
+                        depth: dept
+                    })
+                })
+                    .then(res => {
+                        if (!res.ok) {
+                            throw new Error(`HTTP error! status: ${res.status}`);
+                        }
+                        return res.json();
+                    })
+                    .then(data => {
+                        console.log('Response data:', data);
+                        if (Number.isInteger(data.row) && Number.isInteger(data.col))
+                            clickCell(data.row * size + data.col);
+                        else throw new Error('Invalid response data at /findmove');
+                    })
+                    .catch(error => {
+                        console.error('Error occurred:', error);
+
+                    });
+                //unblock();
+            },
+
+            // Check if there's a winning combination
+            checkWin() {
+                let diagSum = 0;
+                let antiDiagSum = 0;
+                for (let i = 0; i < size; i++) {
+                    let rowSum = 0;
+                    let colSum = 0;
+                    for (let j = 0; j < size; j++) {
+                        rowSum += this.state[i * size + j];
+                        colSum += this.state[j * size + i];
+                        if (i + j === size - 1) {
+                            antiDiagSum += this.state[i * size + j];
+                        }
+                    }
+                    if (rowSum === -size) {
+                        return 'X'; // COMP_LOSE replaced with 'X'
+                    } else if (rowSum === size) {
+                        return 'O'; // COMP_WIN replaced with 'O'
+                    }
+                    if (colSum === -size) {
+                        return 'X'; // COMP_LOSE replaced with 'X'
+                    } else if (colSum === size) {
+                        return 'O'; // COMP_WIN replaced with 'O'
+                    }
+                    diagSum += this.state[i * size + i];
+                }
+                if (diagSum === -size) {
+                    return 'X'; // COMP_LOSE replaced with 'X'
+                }
+                if (diagSum === size) {
+                    return 'O'; // COMP_WIN replaced with 'O'
+                }
+                if (antiDiagSum === -size) {
+                    return 'X'; // COMP_LOSE replaced with 'X'
+                }
+                if (antiDiagSum === size) {
+                    return 'O'; // COMP_WIN replaced with 'O'
+                }
+                return null; // DRAW replaced with null
+            },
+
+            // Highlight winning cells
+            highlight(combo) {
+                combo.forEach((i) => {
+                    document.getElementById("board").children[i].style.color = "red";
+                });
+            },
+
+            // Reset the game
+            reset() {
+                this.state = Array(size * size).fill(0);
+                this.cPlayer = "X";
+                this.gameOver = false;
+                this.cBoard();
+            },
+
+            // Update the game status message
+            uMessage(msg) {
+                document.getElementById("message").textContent = msg;
+            },
+        };
+
+        TicTac.init();
+
+    </script>
+</body>
+
+</html>
