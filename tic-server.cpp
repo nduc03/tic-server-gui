@@ -119,6 +119,7 @@ static Move find_best_move(vector<int> board, int depth) {
 	for (int i = 0; i < size; i++) {
 		for (int j = 0; j < size; j++) {
 			if (board[i * size + j] == 0) {
+				cout << "Thinking on move: " << i + 1 << " " << j + 1 << endl;
 				board[i * size + j] = PLAYER_COMP;
 				int score = minimax_abPruning(board, depth, PLAYER_HUMAN, INT_MIN, INT_MAX);
 				board[i * size + j] = 0;
