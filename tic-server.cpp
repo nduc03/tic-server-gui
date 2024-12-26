@@ -111,7 +111,7 @@ static bool is_full(const vector<int>& board) {
 	return true;
 }
 
-static int minimax_abPruning(vector<int> board, int depth, int player, int alpha, int beta) {
+static int minimax_abPruning(vector<int>& board, int depth, int player, int alpha, int beta) {
 	int size = sqrt(board.size());
 	if (depth == 0) {
 		return 0;
@@ -147,6 +147,60 @@ static int minimax_abPruning(vector<int> board, int depth, int player, int alpha
 	return best_score;
 }
 
+// !: improvement is very minimal while cpu usage is significantly higher
+static int minimax_abPruning_parallel(vector<int>& board, int depth, int player, int alpha, int beta) {
+	int size = sqrt(board.size());
+	if (depth == 0) {
+		return 0;
+	}
+	int result = check_board(board);
+	if (result != 0) {
+		return result;
+	}
+	if (is_full(board)) {
+		return DRAW;
+	}
+
+	int best_score = player == PLAYER_COMP ? INT_MIN : INT_MAX;
+
+	// Vector to store futures for parallel computation
+	vector<future<int>> futures;
+
+	for (int i = 0; i < size; i++) {
+		for (int j = 0; j < size; j++) {
+			if (board[i * size + j] == 0) {
+				board[i * size + j] = player;
+
+				// Use std::async to launch the recursive call
+				futures.push_back(std::async(std::launch::async, [=]() {
+					vector<int> new_board = board; // Pass a copy of the board for thread safety
+					return minimax_abPruning(new_board, depth - 1, -player, alpha, beta);
+					}));
+
+				board[i * size + j] = 0;
+			}
+		}
+	}
+
+	// Wait for all futures and update best_score
+	for (auto& future : futures) {
+		int score = future.get(); // Get the result of the async task
+		if (player == PLAYER_COMP) {
+			best_score = max(score, best_score);
+			alpha = max(alpha, best_score);
+		}
+		else {
+			best_score = min(score, best_score);
+			beta = min(beta, best_score);
+		}
+		if (beta <= alpha) {
+			break; // Pruning
+		}
+	}
+
+	return best_score;
+}
+
 struct Move {
 	int row;
 	int col;
@@ -154,16 +208,17 @@ struct Move {
 
 random_device rd;
 mt19937 rng(rd());
-static Move find_best_move(vector<int> board, int depth) {
+static Move find_best_move(vector<int>& board, int depth) {
 	int size = sqrt(board.size());
 	int best_score = INT_MIN;
 	vector<Move> best_moves;
+	chrono::high_resolution_clock::time_point start = chrono::high_resolution_clock::now();
 	for (int i = 0; i < size; i++) {
 		for (int j = 0; j < size; j++) {
 			if (board[i * size + j] == 0) {
-				cout << "Thinking on move: " << i + 1 << " " << j + 1 << endl;
+				cout << "Thinking move: " << i + 1 << " " << j + 1 << endl;
 				board[i * size + j] = PLAYER_COMP;
-				int score = minimax_abPruning(board, depth, PLAYER_HUMAN, INT_MIN, INT_MAX);
+				int score = minimax_abPruning_parallel(board, depth, PLAYER_HUMAN, INT_MIN, INT_MAX);
 				board[i * size + j] = 0;
 				if (score > best_score) {
 					best_score = score;
@@ -177,6 +232,8 @@ static Move find_best_move(vector<int> board, int depth) {
 		}
 	}
 	uniform_int_distribution<int> dist(0, best_moves.size() - 1);
+	chrono::high_resolution_clock::time_point stop = chrono::high_resolution_clock::now();
+	cout << "Thinking time taken: " << chrono::duration_cast<chrono::milliseconds>(stop - start).count() << "ms" << endl;
 	return best_moves[dist(rng)];
 }
 
@@ -206,10 +263,10 @@ int main()
 	crow::SimpleApp app;
 
 	app.loglevel(crow::LogLevel::Info);
-#ifdef NDEBUG
-	crow::mustache::set_global_base("./");
-#endif
-	CROW_ROUTE(app, "/<int>/<int>")([](int difficulty, int size) {
+//#ifdef NDEBUG
+	//crow::mustache::set_global_base("./");
+//#endif
+	CROW_ROUTE(app, "/<int>/<int>")([&](int difficulty, int size) {
 		auto page = crow::mustache::load("tictactoe.html");
 		crow::mustache::context ctx({ {"size", size} });
 
@@ -236,7 +293,7 @@ int main()
 		return page.render(ctx);
 		});
 
-	CROW_ROUTE(app, "/findmove").methods("POST"_method)([](const crow::request& req) {
+	CROW_ROUTE(app, "/findmove").methods("POST"_method)([&](const crow::request& req) {
 		auto board_state = crow::json::load(req.body);
 		if (!board_state)
 			return crow::response(400);

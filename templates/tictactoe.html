@@ -80,15 +80,15 @@
     <script>
         const PLAYER_INT = -1;
         const COMP_INT = 1;
-        let oldCellIdx = -1;
+        let oldClickedCellIdx = -1;
 
         function clickCell(index) {
-            if (oldCellIdx !== -1) {
-                document.getElementById("board").childNodes[oldCellIdx].style.color = "black";
+            if (oldClickedCellIdx !== -1) {
+                document.getElementById("board").childNodes[oldClickedCellIdx].style.color = "black";
             }
             document.getElementById("board").childNodes[index].click();
             document.getElementById("board").childNodes[index].style.color = "red";
-            oldCellIdx = index;
+            oldClickedCellIdx = index;
         }
 
     </script>
@@ -136,11 +136,10 @@
 
         function unblock() {
             const overlay = document.getElementById('mouseBlockOverlay');
+            overlay.style.display = 'none';
             const loading = document.getElementById('loading');
             if (!loading) return;
             overlay.removeChild(loading);
-            overlay.style.display = 'none';
-
         }
 
         const TicTac = {
@@ -218,10 +217,10 @@
                         dept = 10 * difficulty;
                         break;
                     case 4:
-                        dept = 6 * difficulty;
+                        dept = 7 * difficulty;
                         break;
                     default:
-                        dept = 4 * difficulty;
+                        dept = 5 * difficulty;
                         break;
                 }
 
@@ -323,38 +322,38 @@
                         }
                     }
                     if (rowSum === -size) {
-                        return 'X'; // COMP_LOSE replaced with 'X'
+                        return 'X';
                     } else if (rowSum === size) {
-                        return 'O'; // COMP_WIN replaced with 'O'
+                        return 'O';
                     }
                     if (colSum === -size) {
-                        return 'X'; // COMP_LOSE replaced with 'X'
+                        return 'X';
                     } else if (colSum === size) {
-                        return 'O'; // COMP_WIN replaced with 'O'
+                        return 'O';
                     }
                     diagSum += this.state[i * size + i];
                 }
                 if (diagSum === -size) {
-                    return 'X'; // COMP_LOSE replaced with 'X'
+                    return 'X';
                 }
                 if (diagSum === size) {
-                    return 'O'; // COMP_WIN replaced with 'O'
+                    return 'O';
                 }
                 if (antiDiagSum === -size) {
-                    return 'X'; // COMP_LOSE replaced with 'X'
+                    return 'X';
                 }
                 if (antiDiagSum === size) {
-                    return 'O'; // COMP_WIN replaced with 'O'
+                    return 'O';
                 }
-                return null; // DRAW replaced with null
+                return null;
             },
 
             // Highlight winning cells
-            highlight(combo) {
-                combo.forEach((i) => {
-                    document.getElementById("board").children[i].style.color = "red";
-                });
-            },
+            //highlight(combo) {
+            //    combo.forEach((i) => {
+            //        document.getElementById("board").children[i].style.color = "red";
+            //    });
+            //},
 
             // Reset the game
             reset() {
@@ -374,5 +373,4 @@
 
     </script>
 </body>
-
 </html>
