@@ -96,7 +96,7 @@
 
 <body>
     <div id="size" style="display:none">{{size}}</div>
-    <div id"mouseBlockOverlay">
+    <div id="mouseBlockOverlay">
     </div>
     <div id="main">
         <h1>TIC TAC TOE</h1>
@@ -118,22 +118,23 @@
             overlay.style.display = 'flex';
 
             const loadingText = document.createElement('div');
+            loadingText.id = "loading"
             loadingText.textContent = 'Loading...';
             loadingText.style.fontSize = '16px';
-            loadingText.style.color = '#ffffff'; // Good contrast for black and semi-transparent backgrounds
-            loadingText.style.backgroundColor = '#000000'; // Black background for contrast with white
+            loadingText.style.color = '#ffffff'; 
+            loadingText.style.backgroundColor = '#000000'; 
             loadingText.style.padding = '10px 20px';
             loadingText.style.borderRadius = '5px';
             loadingText.style.boxShadow = '0 0 10px rgba(0, 0, 0, 0.5)';
 
             overlay.appendChild(loadingText);
-            //overlay.id = 'mouseBlockOverlay';
-            //document.body.appendChild(overlay);
         }
 
         function unblock() {
             const overlay = document.getElementById('mouseBlockOverlay');
             overlay.style.display = 'none';
+            const loading = document.getElementById('loading');
+            overlay.removeChild(loading);
         }
 
         const TicTac = {
@@ -199,7 +200,7 @@
 
             // Computer player move
             compMove() {
-                //block();
+                block();
                 const strState = this.state.map(num =>
                     (num === PLAYER_INT ? '-' : num === COMP_INT ? '+' : num)
                 ).join('');
@@ -230,6 +231,7 @@
                     })
                 })
                     .then(res => {
+                        unblock();
                         if (!res.ok) {
                             throw new Error(`HTTP error! status: ${res.status}`);
                         }
@@ -243,9 +245,10 @@
                     })
                     .catch(error => {
                         console.error('Error occurred:', error);
+                        unblock();
 
                     });
-                //unblock();
+                
             },
 
             // Check if there's a winning combination
