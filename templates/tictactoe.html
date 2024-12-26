@@ -1,5 +1,4 @@
 <html>
-
 <head>
     <style>
         body {
@@ -81,25 +80,28 @@
     <script>
         const PLAYER_INT = -1;
         const COMP_INT = 1;
-
-
+        let oldCellIdx = -1;
 
         function clickCell(index) {
+            if (oldCellIdx !== -1) {
+                document.getElementById("board").childNodes[oldCellIdx].style.color = "black";
+            }
             document.getElementById("board").childNodes[index].click();
+            document.getElementById("board").childNodes[index].style.color = "red";
+            oldCellIdx = index;
         }
 
-        
-
-        // Start the game
     </script>
 </head>
 
 <body>
     <div id="size" style="display:none">{{size}}</div>
+    <div id="difficulty" style="display:none">{{float_difficulty}}</div>
     <div id="mouseBlockOverlay">
     </div>
     <div id="main">
         <h1>TIC TAC TOE</h1>
+        <h2>Difficulty: {{difficulty}} - Size: {{size}}x{{size}}</h2>
         <p id="ins">
             Tap on a box to play.<br><br>
             <b>Player X</b> starts first, followed by <b>Computer Player O</b>.
@@ -111,7 +113,9 @@
     </div>
     <script>
         const size = Number.parseInt(document.getElementById('size').innerText);
-        console.log(size);
+        let difficulty = Number.parseFloat(document.getElementById('difficulty').innerText);
+
+        if (difficulty === NaN || difficulty < 0 || difficulty > 1) difficulty = 1;
 
         function block() {
             const overlay = document.getElementById('mouseBlockOverlay');
@@ -121,8 +125,8 @@
             loadingText.id = "loading"
             loadingText.textContent = 'Loading...';
             loadingText.style.fontSize = '16px';
-            loadingText.style.color = '#ffffff'; 
-            loadingText.style.backgroundColor = '#000000'; 
+            loadingText.style.color = '#ffffff';
+            loadingText.style.backgroundColor = '#000000';
             loadingText.style.padding = '10px 20px';
             loadingText.style.borderRadius = '5px';
             loadingText.style.boxShadow = '0 0 10px rgba(0, 0, 0, 0.5)';
@@ -132,9 +136,11 @@
 
         function unblock() {
             const overlay = document.getElementById('mouseBlockOverlay');
-            overlay.style.display = 'none';
             const loading = document.getElementById('loading');
+            if (!loading) return;
             overlay.removeChild(loading);
+            overlay.style.display = 'none';
+
         }
 
         const TicTac = {
@@ -209,19 +215,19 @@
 
                 switch (size) {
                     case 3:
-                        dept = 10;
+                        dept = 10 * difficulty;
                         break;
                     case 4:
-                        dept = 5;
+                        dept = 6 * difficulty;
                         break;
                     default:
-                        dept = 2;
+                        dept = 4 * difficulty;
                         break;
                 }
 
                 fetch("/findmove", {
                     method: "POST",
-                    signal: AbortSignal.timeout(30000),
+                    signal: AbortSignal.timeout(90000),
                     headers: {
                         "Content-Type": "application/json"
                     },
@@ -239,20 +245,71 @@
                     })
                     .then(data => {
                         console.log('Response data:', data);
-                        if (Number.isInteger(data.row) && Number.isInteger(data.col))
+                        if (Number.isInteger(data.row) && Number.isInteger(data.col)) {
                             clickCell(data.row * size + data.col);
-                        else throw new Error('Invalid response data at /findmove');
+                            unblock();
+                        }
+                        else {
+                            unblock();
+                            throw new Error('Invalid response data at /findmove');
+                        }
                     })
                     .catch(error => {
                         console.error('Error occurred:', error);
                         unblock();
 
                     });
-                
+
+            },
+
+            checkBoardBigSize() {
+                const WIN_LENGTH = 5;
+
+                // Helper function to check if 5 consecutive cells sum to target
+                const checkConsecutive = (row, col, dRow, dCol, target) => {
+                    let sum = 0;
+                    for (let i = 0; i < WIN_LENGTH; i++) {
+                        const r = row + i * dRow;
+                        const c = col + i * dCol;
+                        if (r < 0 || r >= size || c < 0 || c >= size) return false;
+                        sum += this.state[r * size + c];
+                    }
+                    return sum === target;
+                };
+
+                // Iterate through each cell to check all possible directions
+                for (let i = 0; i < size; i++) {
+                    for (let j = 0; j < size; j++) {
+                        // Check rows, columns, diagonals, and anti-diagonals for 'O' and 'X'
+                        if (
+                            checkConsecutive(i, j, 0, 1, WIN_LENGTH) || // Horizontal
+                            checkConsecutive(i, j, 1, 0, WIN_LENGTH) || // Vertical
+                            checkConsecutive(i, j, 1, 1, WIN_LENGTH) || // Diagonal
+                            checkConsecutive(i, j, 1, -1, WIN_LENGTH) // Anti-diagonal
+                        ) {
+                            return 'O';
+                        }
+
+                        if (
+                            checkConsecutive(i, j, 0, 1, -WIN_LENGTH) || // Horizontal
+                            checkConsecutive(i, j, 1, 0, -WIN_LENGTH) || // Vertical
+                            checkConsecutive(i, j, 1, 1, -WIN_LENGTH) || // Diagonal
+                            checkConsecutive(i, j, 1, -1, -WIN_LENGTH) // Anti-diagonal
+                        ) {
+                            return 'X';
+                        }
+                    }
+                }
+
+                // If no winning or losing condition is met, return null
+                return null;
             },
 
             // Check if there's a winning combination
             checkWin() {
+                if (size >= 6) {
+                    return this.checkBoardBigSize();
+                }
                 let diagSum = 0;
                 let antiDiagSum = 0;
                 for (let i = 0; i < size; i++) {

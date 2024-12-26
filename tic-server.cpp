@@ -14,8 +14,50 @@ constexpr int DRAW = 0;
 constexpr int PLAYER_COMP = 1;
 constexpr int PLAYER_HUMAN = -1;
 
+constexpr int WIN_LENGTH = 5;
+
+int checkBoardBigSize(const vector<int>& board) {
+	int size = sqrt(board.size());
+	// Lambda function to check if 5 consecutive cells sum to target.
+	auto checkConsecutive = [&](int row, int col, int dRow, int dCol, int target) -> bool {
+		int sum = 0;
+		for (int i = 0; i < WIN_LENGTH; ++i) {
+			int r = row + i * dRow;
+			int c = col + i * dCol;
+			if (r < 0 || r >= size || c < 0 || c >= size) return false;
+			sum += board[r * size + c];
+		}
+		return sum == target;
+		};
+
+	// Iterate through each cell to check all possible directions.
+	for (int i = 0; i < size; ++i) {
+		for (int j = 0; j < size; ++j) {
+			// Check rows, columns, diagonals, and anti-diagonals for COMP_WIN and COMP_LOSE.
+			if (checkConsecutive(i, j, 0, 1, WIN_LENGTH) || // Horizontal
+				checkConsecutive(i, j, 1, 0, WIN_LENGTH) || // Vertical
+				checkConsecutive(i, j, 1, 1, WIN_LENGTH) || // Diagonal
+				checkConsecutive(i, j, 1, -1, WIN_LENGTH))  // Anti-diagonal
+				return COMP_WIN;
+
+			if (checkConsecutive(i, j, 0, 1, -WIN_LENGTH) || // Horizontal
+				checkConsecutive(i, j, 1, 0, -WIN_LENGTH) || // Vertical
+				checkConsecutive(i, j, 1, 1, -WIN_LENGTH) || // Diagonal
+				checkConsecutive(i, j, 1, -1, -WIN_LENGTH))  // Anti-diagonal
+				return COMP_LOSE;
+		}
+	}
+
+	// If no winning or losing condition is met, return DRAW.
+	return DRAW;
+}
+
+
 static int check_board(const vector<int>& board) {
 	int size = sqrt(board.size());
+	if (size >= 6) {
+		return checkBoardBigSize(board);
+	}
 	int diag_sum = 0;
 	int anti_diag_sum = 0;
 	for (int i = 0; i < size; i++) {
@@ -167,9 +209,30 @@ int main()
 #ifdef NDEBUG
 	crow::mustache::set_global_base("./");
 #endif
-	CROW_ROUTE(app, "/<int>")([](int size) {
+	CROW_ROUTE(app, "/<int>/<int>")([](int difficulty, int size) {
 		auto page = crow::mustache::load("tictactoe.html");
 		crow::mustache::context ctx({ {"size", size} });
+
+		string difficultyStr;
+		float difficultyFloat = clamp(difficulty / 2.0f, 0.0f, 1.0f);
+		switch (difficulty) {
+		case 0:
+			difficultyStr = "Easy";
+			break;
+		case 1:
+			difficultyStr = "Medium";
+			break;
+		case 2:
+			difficultyStr = "Hard";
+			break;
+		default:
+			difficultyStr = "Undefined";
+			break;
+		}
+
+		ctx["difficulty"] = difficultyStr;
+		ctx["float_difficulty"] = difficultyFloat;
+
 		return page.render(ctx);
 		});
 
@@ -197,6 +260,6 @@ int main()
 		return crow::response(response);
 		});
 
-	system("start http://localhost:8000/4");
+	system("start http://localhost:8000/0/3");
 	app.port(8000).multithreaded().run();
 }
