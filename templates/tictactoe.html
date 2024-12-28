@@ -77,6 +77,11 @@
             justify-content: center;
             align-items: center;
         }
+
+        .winning-cell {
+            background-color: lightgreen; /* Highlight color for the winning line */
+            border: 2px solid green; /* Add a bold border */
+        }
     </style>
     <script>
         const PLAYER_INT = -1;
@@ -220,10 +225,8 @@
                     dept = 8 * difficulty;
                 else if (size >= 5 && size <= 7)
                     dept = 6 * difficulty;
-                else /*if (size >= 8 && size <= 15)*/
+                else
                     dept = 4 * difficulty;
-                //else
-                    //dept = 3 * difficulty;
 
                 fetch("/findmove", {
                     method: "POST",
@@ -271,14 +274,21 @@
             checkBoardBigSize() {
                 const WIN_LENGTH = 5;
 
+                let winningCombo = [];
+
                 // Helper function to check if 5 consecutive cells sum to target
                 const checkConsecutive = (row, col, dRow, dCol, target) => {
+                    winningCombo = [];
                     let sum = 0;
-                    for (let i = 0; i < WIN_LENGTH; i++) {
+                    for (let i = 0; i < Math.abs(target); i++) {
                         const r = row + i * dRow;
                         const c = col + i * dCol;
                         if (r < 0 || r >= size || c < 0 || c >= size) return false;
                         sum += this.state[r * size + c];
+                        winningCombo.push(r * size + c);
+                    }
+                    if (sum !== target) {
+                        winningCombo = [];
                     }
                     return sum === target;
                 };
@@ -293,6 +303,7 @@
                             checkConsecutive(i, j, 1, 1, WIN_LENGTH) || // Diagonal
                             checkConsecutive(i, j, 1, -1, WIN_LENGTH) // Anti-diagonal
                         ) {
+                            this.highlight(winningCombo);
                             return 'O';
                         }
 
@@ -302,6 +313,7 @@
                             checkConsecutive(i, j, 1, 1, -WIN_LENGTH) || // Diagonal
                             checkConsecutive(i, j, 1, -1, -WIN_LENGTH) // Anti-diagonal
                         ) {
+                            this.highlight(winningCombo);
                             return 'X';
                         }
                     }
@@ -318,49 +330,58 @@
                 }
                 let diagSum = 0;
                 let antiDiagSum = 0;
+                let winningCombo = [];
+
                 for (let i = 0; i < size; i++) {
                     let rowSum = 0;
                     let colSum = 0;
+                    let rowCombo = [];
+                    let colCombo = [];
+
                     for (let j = 0; j < size; j++) {
                         rowSum += this.state[i * size + j];
                         colSum += this.state[j * size + i];
+                        rowCombo.push(i * size + j);
+                        colCombo.push(j * size + i);
+
                         if (i + j === size - 1) {
                             antiDiagSum += this.state[i * size + j];
                         }
                     }
-                    if (rowSum === -size) {
+
+                    if (rowSum === -size || colSum === -size) {
+                        winningCombo = rowSum === -size ? rowCombo : colCombo;
+                        this.highlight(winningCombo);
                         return 'X';
-                    } else if (rowSum === size) {
+                    } else if (rowSum === size || colSum === size) {
+                        winningCombo = rowSum === size ? rowCombo : colCombo;
+                        this.highlight(winningCombo);
                         return 'O';
                     }
-                    if (colSum === -size) {
-                        return 'X';
-                    } else if (colSum === size) {
-                        return 'O';
-                    }
+
                     diagSum += this.state[i * size + i];
                 }
-                if (diagSum === -size) {
+
+                if (diagSum === -size || antiDiagSum === -size) {
+                    winningCombo = diagSum === -size ? [...Array(size).keys()].map((i) => i * size + i) : [...Array(size).keys()].map((i) => (size - 1 - i) * size + i);
+                    this.highlight(winningCombo);
                     return 'X';
                 }
-                if (diagSum === size) {
+
+                if (diagSum === size || antiDiagSum === size) {
+                    winningCombo = diagSum === size ? [...Array(size).keys()].map((i) => i * size + i) : [...Array(size).keys()].map((i) => (size - 1 - i) * size + i);
+                    this.highlight(winningCombo);
                     return 'O';
                 }
-                if (antiDiagSum === -size) {
-                    return 'X';
-                }
-                if (antiDiagSum === size) {
-                    return 'O';
-                }
+
                 return null;
             },
 
-            // Highlight winning cells
-            //highlight(combo) {
-            //    combo.forEach((i) => {
-            //        document.getElementById("board").children[i].style.color = "red";
-            //    });
-            //},
+            highlight(combo) {
+                combo.forEach((i) => {
+                    document.getElementById("board").children[i].classList.add("winning-cell");
+                });
+            },
 
             // Reset the game
             reset() {
