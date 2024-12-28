@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Toe Settings</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+        }
+
+        .container {
+            margin-top: 50px;
+        }
+
+        select, button {
+            margin: 10px;
+            padding: 10px;
+            font-size: 16px;
+        }
+		input{
+            margin: 10px;
+            padding: 10px;
+            font-size: 16px;
+        }
+        button {
+			height: 1.5cm;
+			width: 10cm;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #218838;
+        }
+		
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Setup Tic Tac Toe</h1>
+
+        <label for="difficulty">Select Difficulty:</label>
+        <select id="difficulty">
+            <option value="0">Easy</option>
+            <option value="1">Medium</option>
+            <option value="2">Hard</option>
+        </select>
+
+        <label for="map">Select Size of Map:</label>
+        <input id="map", value="3">
+
+
+		<!--<label for="first">Select Player First:</label>
+        <select id="first">
+            <option value="player">Player</option>
+            <option value="ai">AI</option>
+        </select>-->
+
+        <br>
+
+        <button id="startGame" onclick="enterMap()">
+			Start Game
+		</button>
+
+    </div>
+
+    <script>
+        function enterMap() {
+            const difficulty = document.getElementById('difficulty').value;
+            const map = document.getElementById('map').value;
+
+            window.location.href = `/${difficulty}/${map}`;
+        }
+        
+    </script>
+</body>
+</html>

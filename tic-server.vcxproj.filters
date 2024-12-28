@@ -23,5 +23,8 @@
     <None Include="templates\tictactoe.html">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="templates\menu.html">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
 </Project>
