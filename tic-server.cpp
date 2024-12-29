@@ -22,25 +22,25 @@ struct Move {
 	int col;
 };
 
-static int evaluate_large_board(const vector<int>& board) {
-	int size = sqrt(board.size());
+static int evaluate_large_board(const vector<int>& board, int gridSize) {
 	// Lambda function to check if 5 consecutive cells sum to target.
 	auto checkConsecutive = [&](int row, int col, int dRow, int dCol) -> int {
 		int sum = 0;
 		for (int i = 0; i < WIN_LENGTH; ++i) {
 			int r = row + i * dRow;
 			int c = col + i * dCol;
-			if (r < 0 || r >= size || c < 0 || c >= size) return false;
-			sum += board[r * size + c];
+			if (r < 0 || r >= gridSize || c < 0 || c >= gridSize) return false;
+
+			sum += board[r * gridSize + c];
 		}
 		return sum;
 		};
 
 	int score = 0;
 	// Iterate through each cell to check all possible directions.
-	for (int i = 0; i < size; ++i) {
-		for (int j = 0; j < size; ++j) {
-			if (board[i * size + j] == EMPTY) continue;
+	for (int i = 0; i < gridSize; ++i) {
+		for (int j = 0; j < gridSize; ++j) {
+			if (board[i * gridSize + j] == EMPTY) continue;
 
 			int horizontal = checkConsecutive(i, j, 0, 1);
 			int vertical = checkConsecutive(i, j, 1, 0);
@@ -57,86 +57,73 @@ static int evaluate_large_board(const vector<int>& board) {
 				vertical == -WIN_LENGTH ||
 				diagonal == -WIN_LENGTH ||
 				antiDiagonal == -WIN_LENGTH)
-				score -= 200;
+				score -= 5000;
 
 			if (abs(horizontal) == 1 &&
 				abs(vertical) == 1 &&
 				abs(diagonal) == 1 &&
 				abs(antiDiagonal) == 1)
-			{
-				/*maxScore = max(maxScore, DRAW);*/
 				continue;
-			}
 
-			//int thisCellScore = max(horizontal, max(vertical, max(diagonal, antiDiagonal)));
-			score += horizontal + vertical + diagonal + antiDiagonal;
+			score += (horizontal + vertical + diagonal + antiDiagonal) * 2;
 		}
 	}
 
 	return score;
 }
 
-static int check_board(const vector<int>& board) {
-	int size = sqrt(board.size());
-	if (size >= 6) {
-		// If the board is large, use heuristic function instead.
-		return evaluate_large_board(board);
-	}
+static int check_board(const vector<int>& board, int gridSize) {
 	int diag_sum = 0;
 	int anti_diag_sum = 0;
-	for (int i = 0; i < size; i++) {
+	for (int i = 0; i < gridSize; i++) {
 		int row_sum = 0;
 		int col_sum = 0;
-		for (int j = 0; j < size; j++) {
-			row_sum += board[i * size + j];
-			col_sum += board[j * size + i];
-			if (i + j == size - 1) {
-				anti_diag_sum += board[i * size + j];
+		for (int j = 0; j < gridSize; j++) {
+			row_sum += board[i * gridSize + j];
+			col_sum += board[j * gridSize + i];
+			if (i + j == gridSize - 1) {
+				anti_diag_sum += board[i * gridSize + j];
 			}
 		}
-		if (row_sum == -size) {
+		if (row_sum == -gridSize) {
 			return COMP_LOSE;
 		}
-		else if (row_sum == size) {
+		else if (row_sum == gridSize) {
 			return COMP_WIN;
 		}
-		if (col_sum == -size) {
+		if (col_sum == -gridSize) {
 			return COMP_LOSE;
 		}
-		else if (col_sum == size) {
+		else if (col_sum == gridSize) {
 			return COMP_WIN;
 		}
-		diag_sum += board[i * size + i];
+		diag_sum += board[i * gridSize + i];
 	}
-	if (diag_sum == -size) {
+	if (diag_sum == -gridSize) {
 		return COMP_LOSE;
 	}
-	if (diag_sum == size) {
+	if (diag_sum == gridSize) {
 		return COMP_WIN;
 	}
-	if (anti_diag_sum == -size) {
+	if (anti_diag_sum == -gridSize) {
 		return COMP_LOSE;
 	}
-	if (anti_diag_sum == size) {
+	if (anti_diag_sum == gridSize) {
 		return COMP_WIN;
 	}
 	return DRAW;
 }
 
 static bool is_full(const vector<int>& board) {
-	int size = sqrt(board.size());
-	for (int i = 0; i < size; i++) {
-		for (int j = 0; j < size; j++) {
-			if (board[i * size + j] == 0) {
-				return false;
-			}
+	for (int i = 0; i < board.size(); i++) {
+		if (board[i] == EMPTY) {
+			return false;
 		}
 	}
 	return true;
 }
 
-static bool are_neighbors_not_empty(const vector<int>& board, int row, int col) {
-	int size = sqrt(board.size());
+static bool are_neighbors_not_empty(const vector<int>& board, int gridSize, int row, int col) {
 	for (int i = -1; i <= 1; i++) {
 		for (int j = -1; j <= 1; j++) {
 			if (i == 0 && j == 0) continue;
@@ -144,31 +131,33 @@ static bool are_neighbors_not_empty(const vector<int>& board, int row, int col) 
 			int row_offset = row + i;
 			int col_offset = col + j;
 
-			
-			if (row_offset < 0 || row_offset >= size || col_offset < 0 || col_offset >= size) continue;
 
-			if (board[row_offset * size + col_offset] != EMPTY)
+			if (row_offset < 0 || row_offset >= gridSize || col_offset < 0 || col_offset >= gridSize) continue;
+
+			if (board[row_offset * gridSize + col_offset] != EMPTY)
 				return true;
 		}
 	}
 	return false;
 }
 
-static int minimax_abPruning(vector<int>& board, int depth, int player, int alpha, int beta) {
-	int size = sqrt(board.size());
+static int minimax_abPruning(vector<int>& board, int gridSize, int depth, int player, int alpha, int beta) {
 	if (depth == 0) {
-		return check_board(board);
+		if (gridSize <= 5) return check_board(board, gridSize);
+		return evaluate_large_board(board, gridSize);
 	}
 	if (is_full(board)) {
-		return DRAW;
+		if (gridSize <= 5) return check_board(board, gridSize);
+		else return DRAW; // optimize for large board, but may not be accurate
 	}
 	int best_score = player == PLAYER_COMP ? INT_MIN : INT_MAX;
-	for (int i = 0; i < size; i++) {
-		for (int j = 0; j < size; j++) {
-			if (board[i * size + j] == EMPTY && are_neighbors_not_empty(board, i, j)) {
-				board[i * size + j] = player;
-				int score = minimax_abPruning(board, depth - 1, -player, alpha, beta);
-				board[i * size + j] = EMPTY;
+	for (int i = 0; i < gridSize; i++) {
+		for (int j = 0; j < gridSize; j++) {
+			size_t index = i * gridSize + j;
+			if (board[index] == EMPTY && are_neighbors_not_empty(board, gridSize, i, j)) {
+				board[index] = player;
+				int score = minimax_abPruning(board, gridSize, depth - 1, -player, alpha, beta);
+				board[index] = EMPTY;
 
 				if (player == PLAYER_COMP) {
 					best_score = max(score, best_score);
@@ -188,13 +177,14 @@ static int minimax_abPruning(vector<int>& board, int depth, int player, int alph
 }
 
 // !: improvement is very minimal while cpu usage is significantly higher
-static int minimax_abPruning_parallel(vector<int>& board, int depth, int player, int alpha, int beta) {
-	int size = sqrt(board.size());
+static int minimax_abPruning_parallel(vector<int>& board, int gridSize, int depth, int player, int alpha, int beta) {
 	if (depth == 0) {
-		return check_board(board);
+		if (gridSize <= 5) return check_board(board, gridSize);
+		return evaluate_large_board(board, gridSize);
 	}
 	if (is_full(board)) {
-		return DRAW;
+		if (gridSize <= 5) return check_board(board, gridSize);
+		else return DRAW;
 	}
 
 	int best_score = player == PLAYER_COMP ? INT_MIN : INT_MAX;
@@ -202,18 +192,19 @@ static int minimax_abPruning_parallel(vector<int>& board, int depth, int player,
 	// Vector to store futures for parallel computation
 	vector<future<int>> futures;
 
-	for (int i = 0; i < size; i++) {
-		for (int j = 0; j < size; j++) {
-			if (board[i * size + j] == EMPTY && are_neighbors_not_empty(board, i, j)) {
-				board[i * size + j] = player;
+	for (int i = 0; i < gridSize; i++) {
+		for (int j = 0; j < gridSize; j++) {
+			size_t index = i * gridSize + j;
+			if (board[index] == EMPTY && are_neighbors_not_empty(board, gridSize, i, j)) {
+				board[index] = player;
 
 				// Use std::async to launch the recursive call
-				futures.push_back(std::async(std::launch::async, [=]() {
+				futures.push_back(async(launch::async, [=]() {
 					vector<int> new_board = board; // Pass a copy of the board for thread safety
-					return minimax_abPruning(new_board, depth - 1, -player, alpha, beta);
+					return minimax_abPruning(new_board, gridSize, depth - 1, -player, alpha, beta);
 					}));
 
-				board[i * size + j] = EMPTY;
+				board[index] = EMPTY;
 			}
 		}
 	}
@@ -239,20 +230,20 @@ static int minimax_abPruning_parallel(vector<int>& board, int depth, int player,
 
 random_device rd;
 mt19937 rng(rd());
-static Move find_best_move(vector<int>& board, int depth) {
+static Move find_best_move(vector<int>& board, int depth, int player = PLAYER_COMP) {
 	int size = sqrt(board.size());
 	int best_score = INT_MIN;
 	vector<Move> best_moves;
+	cout << "Board size: " << size << "\n";
+	cout << "Thinking depth: " << depth << "\n";
 	chrono::high_resolution_clock::time_point start = chrono::high_resolution_clock::now();
 	for (int i = 0; i < size; i++) {
 		for (int j = 0; j < size; j++) {
-			if (board[i * size + j] == EMPTY && are_neighbors_not_empty(board, i, j)) {
+			if (board[i * size + j] == EMPTY && are_neighbors_not_empty(board, size, i, j)) {
 				cout << "Thinking move: " << i + 1 << " " << j + 1 << endl;
-				board[i * size + j] = PLAYER_COMP;
-				//vector<size_t> expandArea = move(board, i, j, PLAYER_COMP);
-				int score = minimax_abPruning_parallel(board, depth, PLAYER_HUMAN, INT_MIN, INT_MAX);
+				board[i * size + j] = player;
+				int score = minimax_abPruning_parallel(board, size, depth, -player, INT_MIN, INT_MAX);
 				board[i * size + j] = EMPTY;
-				//undo(board, expandArea, i, j);
 				if (score > best_score) {
 					best_score = score;
 					best_moves.clear();
@@ -264,19 +255,21 @@ static Move find_best_move(vector<int>& board, int depth) {
 			}
 		}
 	}
-	//system("pause");
 	if (best_moves.empty()) {
-		cerr << "No best move found" << endl;
+		cerr << "Error: No best move found." << endl;
 		return { -1, -1 };
 	}
 	uniform_int_distribution<int> dist(0, best_moves.size() - 1);
 	chrono::high_resolution_clock::time_point stop = chrono::high_resolution_clock::now();
 	cout << "Thinking time taken: " << chrono::duration_cast<chrono::milliseconds>(stop - start).count() << "ms" << endl;
-	return best_moves[dist(rng)];
+	Move move_chosen = best_moves[dist(rng)];
+	cout << "Chosen move: " << move_chosen.row << " " << move_chosen.col << endl;
+	return move_chosen;
 }
 
 static vector<int> toboard(string boardState) {
 	vector<int> board;
+	board.reserve(boardState.size());
 	for (int i = 0; i < boardState.size(); i++) {
 		switch (boardState[i]) {
 		case '-':
@@ -293,6 +286,30 @@ static vector<int> toboard(string boardState) {
 
 	return board;
 }
+
+#ifdef _DEBUG
+void print_board(const vector<int>& board) {
+	int size = sqrt(board.size());
+	for (int i = 0; i < size; i++) {
+		for (int j = 0; j < size; j++) {
+			switch (board[i * size + j]) {
+			case PLAYER_HUMAN:
+				cout << "|X";
+				break;
+			case PLAYER_COMP:
+				cout << "|O";
+				break;
+			default:
+				cout << "| ";
+				break;
+			}
+		}
+		cout << "|\n";
+	}
+	cout << endl;
+}
+#endif // _DEBUG
+
 
 int main()
 {
@@ -341,11 +358,10 @@ int main()
 			return crow::response(400);
 
 		string state = board_state["state"].s();
-		auto depth = board_state["depth"].i();
+		int depth = board_state["depth"].i();
 
-		cout << state << endl;
+		vector<int> board = toboard(state);
 
-		auto board = toboard(state);
 		if (board.empty())
 			return crow::response(400);
 		int size = sqrt(board.size());

@@ -72,9 +72,22 @@
     </div>
 
     <script>
+        if (localStorage.getItem('difficulty'))
+            (document.getElementById('difficulty').value = localStorage.getItem('difficulty'));
+        if (localStorage.getItem('map'))
+            (document.getElementById('map').value = localStorage.getItem('map'));
+
+        document.getElementById('map').addEventListener('keypress', () => {
+            if (event.key === 'Enter') {
+                enterMap();
+            }
+        });
         function enterMap() {
             const difficulty = document.getElementById('difficulty').value;
             const map = document.getElementById('map').value;
+
+            localStorage.setItem('difficulty', difficulty);
+            localStorage.setItem('map', map);
 
             window.location.href = `/${difficulty}/${map}`;
         }

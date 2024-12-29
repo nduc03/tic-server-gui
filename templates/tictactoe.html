@@ -178,6 +178,10 @@
                 this.uMessage(`Player ${this.cPlayer}'s turn`);
             },
 
+            isFull() {
+                return this.state.every(cell => cell);
+            },
+
             // Handle a cell click
             handleClick(e) {
                 const cell = e.target;
@@ -197,7 +201,7 @@
                 if (win) {
                     this.uMessage(`Player ${win} wins!`);
                     this.gameOver = true;
-                } else if (this.state.every((cell) => cell)) {
+                } else if (this.isFull()) {
                     this.uMessage("It's a tie!");
                     this.gameOver = true;
                 } else {
@@ -226,7 +230,7 @@
                 else if (size >= 5 && size <= 7)
                     dept = 6 * difficulty;
                 else
-                    dept = 4 * difficulty;
+                    dept = 3 * difficulty;
 
                 fetch("/findmove", {
                     method: "POST",
@@ -243,6 +247,10 @@
                         unblock();
                         if (!res.ok) {
                             throw new Error(`HTTP error! status: ${res.status}`);
+                        }
+                        if (res.status === 204 && !this.isFull()) {
+                            console.error('Server did not return a move.')
+                            return;
                         }
                         return res.json();
                     })
