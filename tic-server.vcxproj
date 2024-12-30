@@ -132,11 +132,15 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="advanced_evaluate.cpp" />
     <ClCompile Include="tic-server.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="templates\menu.html" />
     <None Include="templates\tictactoe.html" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="advanced_evaluate.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

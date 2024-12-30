@@ -18,6 +18,9 @@
     <ClCompile Include="tic-server.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="advanced_evaluate.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="templates\tictactoe.html">
@@ -26,5 +29,10 @@
     <None Include="templates\menu.html">
       <Filter>Resource Files</Filter>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="advanced_evaluate.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -22,24 +22,25 @@
             padding: 10px;
             font-size: 16px;
         }
-		input{
+
+        input {
             margin: 10px;
             padding: 10px;
             font-size: 16px;
         }
+
         button {
-			height: 1.5cm;
-			width: 10cm;
+            height: 1.5cm;
+            width: 10cm;
             background-color: #28a745;
             color: white;
             border: none;
             cursor: pointer;
         }
 
-        button:hover {
-            background-color: #218838;
-        }
-		
+            button:hover {
+                background-color: #218838;
+            }
     </style>
 </head>
 <body>
@@ -54,10 +55,16 @@
         </select>
 
         <label for="map">Select Size of Map:</label>
-        <input id="map", value="3">
+        <input id="map" , value="3">
+
+        <label for="mode">Mode:</label>
+        <select id="mode">
+            <option value="0">Player vs AI</option>
+            <option value="1">AI vs AI</option>
+        </select>
 
 
-		<!--<label for="first">Select Player First:</label>
+        <!--<label for="first">Select Player First:</label>
         <select id="first">
             <option value="player">Player</option>
             <option value="ai">AI</option>
@@ -66,8 +73,8 @@
         <br>
 
         <button id="startGame" onclick="enterMap()">
-			Start Game
-		</button>
+            Start Game
+        </button>
 
     </div>
 
@@ -85,13 +92,15 @@
         function enterMap() {
             const difficulty = document.getElementById('difficulty').value;
             const map = document.getElementById('map').value;
+            const mode = document.getElementById('mode').value;
 
             localStorage.setItem('difficulty', difficulty);
             localStorage.setItem('map', map);
+            localStorage.setItem('mode', mode);
+
 
             window.location.href = `/${difficulty}/${map}`;
         }
-        
     </script>
 </body>
 </html>

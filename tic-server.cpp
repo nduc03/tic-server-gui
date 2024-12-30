@@ -22,7 +22,10 @@ struct Move {
 	int col;
 };
 
-static int evaluate_large_board(const vector<int>& board, int gridSize) {
+// todo:
+// - now calculate consecutive for all directions not just downward
+// - add open 4 and 2 threes check
+static int evaluate_large_board(const vector<int>& board, int gridSize, int player) {
 	// Lambda function to check if 5 consecutive cells sum to target.
 	auto checkConsecutive = [&](int row, int col, int dRow, int dCol) -> int {
 		int sum = 0;
@@ -51,13 +54,13 @@ static int evaluate_large_board(const vector<int>& board, int gridSize) {
 				vertical == WIN_LENGTH ||
 				diagonal == WIN_LENGTH ||
 				antiDiagonal == WIN_LENGTH)
-				score += 50;
+				score += 5000;
 
 			if (horizontal == -WIN_LENGTH ||
 				vertical == -WIN_LENGTH ||
 				diagonal == -WIN_LENGTH ||
 				antiDiagonal == -WIN_LENGTH)
-				score -= 5000;
+				score -= 4000;
 
 			if (abs(horizontal) == 1 &&
 				abs(vertical) == 1 &&
@@ -69,7 +72,7 @@ static int evaluate_large_board(const vector<int>& board, int gridSize) {
 		}
 	}
 
-	return score;
+	return score * player;
 }
 
 static int check_board(const vector<int>& board, int gridSize) {
@@ -144,13 +147,13 @@ static bool are_neighbors_not_empty(const vector<int>& board, int gridSize, int 
 static int minimax_abPruning(vector<int>& board, int gridSize, int depth, int player, int alpha, int beta) {
 	if (depth == 0) {
 		if (gridSize <= 5) return check_board(board, gridSize);
-		return evaluate_large_board(board, gridSize);
+		return evaluate_large_board(board, gridSize, player);
 	}
 	if (is_full(board)) {
 		if (gridSize <= 5) return check_board(board, gridSize);
 		else return DRAW; // optimize for large board, but may not be accurate
 	}
-	int best_score = player == PLAYER_COMP ? INT_MIN : INT_MAX;
+	int best_score = player == PLAYER_COMP ? INT32_MIN : INT32_MAX;
 	for (int i = 0; i < gridSize; i++) {
 		for (int j = 0; j < gridSize; j++) {
 			size_t index = i * gridSize + j;
@@ -180,14 +183,14 @@ static int minimax_abPruning(vector<int>& board, int gridSize, int depth, int pl
 static int minimax_abPruning_parallel(vector<int>& board, int gridSize, int depth, int player, int alpha, int beta) {
 	if (depth == 0) {
 		if (gridSize <= 5) return check_board(board, gridSize);
-		return evaluate_large_board(board, gridSize);
+		return evaluate_large_board(board, gridSize, player);
 	}
 	if (is_full(board)) {
 		if (gridSize <= 5) return check_board(board, gridSize);
 		else return DRAW;
 	}
 
-	int best_score = player == PLAYER_COMP ? INT_MIN : INT_MAX;
+	int best_score = player == PLAYER_COMP ? INT32_MIN : INT32_MAX;
 
 	// Vector to store futures for parallel computation
 	vector<future<int>> futures;
@@ -232,7 +235,7 @@ random_device rd;
 mt19937 rng(rd());
 static Move find_best_move(vector<int>& board, int depth, int player = PLAYER_COMP) {
 	int size = sqrt(board.size());
-	int best_score = INT_MIN;
+	int best_score = player == PLAYER_COMP ? INT32_MIN : INT32_MAX;
 	vector<Move> best_moves;
 	cout << "Board size: " << size << "\n";
 	cout << "Thinking depth: " << depth << "\n";
@@ -240,10 +243,11 @@ static Move find_best_move(vector<int>& board, int depth, int player = PLAYER_CO
 	for (int i = 0; i < size; i++) {
 		for (int j = 0; j < size; j++) {
 			if (board[i * size + j] == EMPTY && are_neighbors_not_empty(board, size, i, j)) {
-				cout << "Thinking move: " << i + 1 << " " << j + 1 << endl;
+				cout << "Thinking move: " << i + 1 << " " << j + 1 << "\n";
 				board[i * size + j] = player;
-				int score = minimax_abPruning_parallel(board, size, depth, -player, INT_MIN, INT_MAX);
+				int score = minimax_abPruning_parallel(board, size, depth, -player, INT32_MIN, INT32_MAX);
 				board[i * size + j] = EMPTY;
+
 				if (score > best_score) {
 					best_score = score;
 					best_moves.clear();
@@ -370,6 +374,32 @@ int main()
 		if (is_full(board))
 			return crow::response(204);
 		auto move = find_best_move(board, depth);
+
+		crow::json::wvalue response;
+		response["row"] = move.row;
+		response["col"] = move.col;
+
+		return crow::response(response);
+		});
+
+	CROW_ROUTE(app, "/suggestMove").methods("POST"_method)([&](const crow::request& req) {
+		auto board_state = crow::json::load(req.body);
+		if (!board_state)
+			return crow::response(400);
+
+		string state = board_state["state"].s();
+		int depth = board_state["depth"].i();
+
+		vector<int> board = toboard(state);
+
+		if (board.empty())
+			return crow::response(400);
+		int size = sqrt(board.size());
+		if (size * size != board.size())
+			return crow::response(400);
+		if (is_full(board))
+			return crow::response(204);
+		auto move = find_best_move(board, depth, PLAYER_HUMAN);
 
 		crow::json::wvalue response;
 		response["row"] = move.row;
