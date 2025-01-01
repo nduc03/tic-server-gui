@@ -32,7 +32,7 @@ static int evaluate_large_board(const vector<int>& board, int gridSize, int play
 		for (int i = 0; i < WIN_LENGTH; ++i) {
 			int r = row + i * dRow;
 			int c = col + i * dCol;
-			if (r < 0 || r >= gridSize || c < 0 || c >= gridSize) return false;
+			if (r < 0 || r >= gridSize || c < 0 || c >= gridSize) return 0;
 
 			sum += board[r * gridSize + c];
 		}
@@ -50,17 +50,46 @@ static int evaluate_large_board(const vector<int>& board, int gridSize, int play
 			int diagonal = checkConsecutive(i, j, 1, 1);
 			int antiDiagonal = checkConsecutive(i, j, 1, -1);
 
-			if (horizontal == WIN_LENGTH ||
-				vertical == WIN_LENGTH ||
-				diagonal == WIN_LENGTH ||
-				antiDiagonal == WIN_LENGTH)
-				score += 5000;
+			if (horizontal == WIN_LENGTH * player ||
+				vertical == WIN_LENGTH * player ||
+				diagonal == WIN_LENGTH * player ||
+				antiDiagonal == WIN_LENGTH * player)
+				score += 100000;
 
-			if (horizontal == -WIN_LENGTH ||
-				vertical == -WIN_LENGTH ||
-				diagonal == -WIN_LENGTH ||
-				antiDiagonal == -WIN_LENGTH)
-				score -= 4000;
+			if (horizontal == -WIN_LENGTH * player ||
+				vertical == -WIN_LENGTH * player ||
+				diagonal == -WIN_LENGTH * player ||
+				antiDiagonal == -WIN_LENGTH * player)
+				score -= 100000;
+
+			// open 4
+			if (horizontal == WIN_LENGTH - 1 ||
+				vertical == WIN_LENGTH - 1 ||
+				diagonal == WIN_LENGTH - 1 ||
+				antiDiagonal == WIN_LENGTH - 1)
+				score += 50000;
+
+			if (horizontal == -WIN_LENGTH + 1 ||
+				vertical == -WIN_LENGTH + 1 ||
+				diagonal == -WIN_LENGTH + 1 ||
+				antiDiagonal == -WIN_LENGTH + 1)
+				score -= 50000;
+			// end open 4
+
+			// 2 threes check
+			array<int, 4> allConsecutives = { horizontal,vertical,diagonal,antiDiagonal };
+
+			int consecutiveCount = 0;
+			int enemyConsecutiveCount = 0;
+
+			for (auto conse : allConsecutives) {
+				if (conse == WIN_LENGTH - 2) consecutiveCount++;
+				else if (conse == -WIN_LENGTH + 2) enemyConsecutiveCount++;
+			}
+
+			if (consecutiveCount >= 2) score += 40000;
+			if (enemyConsecutiveCount >= 2) score -= 40000;
+			// end 2 threes check
 
 			if (abs(horizontal) == 1 &&
 				abs(vertical) == 1 &&
@@ -68,10 +97,9 @@ static int evaluate_large_board(const vector<int>& board, int gridSize, int play
 				abs(antiDiagonal) == 1)
 				continue;
 
-			score += (horizontal + vertical + diagonal + antiDiagonal) * 2;
+			score += (horizontal + vertical + diagonal + antiDiagonal) * 5;
 		}
 	}
-
 	return score * player;
 }
 
@@ -176,7 +204,7 @@ static int minimax_abPruning(vector<int>& board, int gridSize, int depth, int pl
 			}
 		}
 	}
-	return best_score;
+	return best_score * depth;
 }
 
 // !: improvement is very minimal while cpu usage is significantly higher
@@ -228,7 +256,7 @@ static int minimax_abPruning_parallel(vector<int>& board, int gridSize, int dept
 		}
 	}
 
-	return best_score;
+	return best_score * depth;
 }
 
 random_device rd;
@@ -248,7 +276,12 @@ static Move find_best_move(vector<int>& board, int depth, int player = PLAYER_CO
 				int score = minimax_abPruning_parallel(board, size, depth, -player, INT32_MIN, INT32_MAX);
 				board[i * size + j] = EMPTY;
 
-				if (score > best_score) {
+				if (player == PLAYER_COMP && score > best_score) {
+					best_score = score;
+					best_moves.clear();
+					best_moves.push_back({ i, j });
+				}
+				else if (player == PLAYER_HUMAN && score < best_score) {
 					best_score = score;
 					best_moves.clear();
 					best_moves.push_back({ i, j });
